@@ -1,0 +1,5 @@
+# Swap files from vim
+.sw[a-z]
+.*.sw[a-z]
+# Backup files from vim
+*~
