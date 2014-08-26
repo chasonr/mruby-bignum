@@ -6,7 +6,7 @@
 /* Size of a Bignum digit:  16, 32 or 64 */
 /* If not defined, this is the same size as a Fixnum */
 /* To use MRB_BIGNUM_BIT == 64, the compiler must support unsigned __int128 */
-#define MRB_BIGNUM_BIT 64
+#define MRB_BIGNUM_BIT 32
 
 /* Define to enable recursive algorithms for multiplication, division,
    squaring, and conversion to and from strings */
