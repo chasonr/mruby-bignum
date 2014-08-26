@@ -1367,7 +1367,7 @@ bn_bitwise(mrb_state *mrb, struct Bignum const *in1, struct Bignum const *in2,
       out->digits[i] = ~out->digits[i] + 1;
       ++i;
     }
-    for (i = 0; i < out->len && out->digits[i] == 0; ++i) {
+    for (; i < out->len; ++i) {
       out->digits[i] = ~out->digits[i];
     }
   }
