@@ -2,7 +2,7 @@
 
   def fact(n)
     return 1 if n == 0
-    f = 1
+    f = 1.to_big
     while n>0
       f *= n
       n -= 1
@@ -16,12 +16,12 @@
     assert_equal($x, fact(40))
     assert_true($x < $x+2)
     assert_true($x > $x-2)
-    assert_equal(815915283247897734345611269596115894272000000000, $x)
-    assert_not_equal(815915283247897734345611269596115894272000000001, $x)
-    assert_equal(815915283247897734345611269596115894272000000001, $x+1)
-    assert_equal(335367096786357081410764800000, $x/fact(20))
+    assert_equal("815915283247897734345611269596115894272000000000".to_i, $x)
+    assert_not_equal("815915283247897734345611269596115894272000000001".to_i, $x)
+    assert_equal("815915283247897734345611269596115894272000000001".to_i, $x+1)
+    assert_equal("335367096786357081410764800000".to_i, $x/fact(20))
     $x = -$x
-    assert_equal(-815915283247897734345611269596115894272000000000, $x)
+    assert_equal("-815915283247897734345611269596115894272000000000".to_i, $x)
     assert_equal(2-(2**32), -(2**32-2))
     assert_equal(2**32 - 5, (2**32-3)-2)
 
@@ -53,18 +53,18 @@
     a = b * 9 + 7
     assert_equal(7, a % b) # was: modulo
     assert_equal(-b + 7, a % -b) # was: modulo
-    assert_equal(b + -7, -a % b) # was: modulo
+    assert_equal(b + -7.to_big, -a % b) # was: modulo; issue #2557 avoided here
     assert_equal(-7, -a % -b) # was: modulo
     #NotImp assert_equal(7, a % b) # was: remainder
     #NotImp assert_equal(7, a % -b) # was: remainder
     #NotImp assert_equal(-7, -a % b) # was: remainder (fail)
     #NotImp assert_equal(-7, -a % -b) # was: remainder (fail)
 
-    assert_equal(10000000000000000000100000000000000000000, 10**40+10**20)
-    assert_equal(100000000000000000000, 10**40/10**20)
+    assert_equal("10000000000000000000100000000000000000000".to_i, 10**40+10**20)
+    assert_equal("100000000000000000000".to_i, 10**40/10**20)
 
-    a = 677330545177305025495135714080
-    b = 14269972710765292560
+    a = "677330545177305025495135714080".to_i
+    b = "14269972710765292560".to_i
     assert_equal(0, a % b)
     assert_equal(0, -a % b)
   end
@@ -80,19 +80,19 @@
   end
 
   assert('Bignum', 'test_shift') do
-    shift_test(-4518325415524767873)
-    shift_test(-0xfffffffffffffffff)
+    shift_test("-4518325415524767873".to_i)
+    shift_test("-0xfffffffffffffffff".to_i)
   end
 
   assert('Bignum', 'test_to_s') do
-    assert_equal("fvvvvvvvvvvvv" ,18446744073709551615.to_s(32), "[ruby-core:10686]")
-    assert_equal("g000000000000" ,18446744073709551616.to_s(32), "[ruby-core:10686]")
-    assert_equal("3w5e11264sgsf" ,18446744073709551615.to_s(36), "[ruby-core:10686]")
-    assert_equal("3w5e11264sgsg" ,18446744073709551616.to_s(36), "[ruby-core:10686]")
-    assert_equal("nd075ib45k86f" ,18446744073709551615.to_s(31), "[ruby-core:10686]")
-    assert_equal("nd075ib45k86g" ,18446744073709551616.to_s(31), "[ruby-core:10686]")
-    assert_equal("1777777777777777777777" ,18446744073709551615.to_s(8))
-    assert_equal("-1777777777777777777777" ,-18446744073709551615.to_s(8))
+    assert_equal("fvvvvvvvvvvvv" ,"18446744073709551615".to_i.to_s(32), "[ruby-core:10686]")
+    assert_equal("g000000000000" ,"18446744073709551616".to_i.to_s(32), "[ruby-core:10686]")
+    assert_equal("3w5e11264sgsf" ,"18446744073709551615".to_i.to_s(36), "[ruby-core:10686]")
+    assert_equal("3w5e11264sgsg" ,"18446744073709551616".to_i.to_s(36), "[ruby-core:10686]")
+    assert_equal("nd075ib45k86f" ,"18446744073709551615".to_i.to_s(31), "[ruby-core:10686]")
+    assert_equal("nd075ib45k86g" ,"18446744073709551616".to_i.to_s(31), "[ruby-core:10686]")
+    assert_equal("1777777777777777777777" ,"18446744073709551615".to_i.to_s(8))
+    assert_equal("-1777777777777777777777" ,"-18446744073709551615".to_i.to_s(8))
     assert_equal("1"+"0"*99+"1", (10**100+1).to_s)
     assert_equal("1"+"0"*900+"9"*100, (10**1000+(10**100-1)).to_s)
   end
@@ -114,7 +114,7 @@
 
   f = b
   while Bignum === f-1
-    f = f >> 1
+    f = (f >> 1).to_fix
   end
   FIXNUM_MAX = f-1
 
@@ -240,12 +240,12 @@
   assert('Bignum', 'test_plus') do
     assert_equal(T32.to_f, T32P + 1.0)
     assert_raise(TypeError) { T32 + "foo" }
-    assert_equal(1267651809154049016125877911552, (2**100) + (2**80))
-    assert_equal(1267651809154049016125877911552, (2**80) + (2**100))
+    assert_equal("1267651809154049016125877911552".to_i, (2**100) + (2**80))
+    assert_equal("1267651809154049016125877911552".to_i, (2**80) + (2**100))
     assert_equal(2**101, (2**100) + (2.0**100))
     o = Object.new
     def o.coerce(x); [x, 2**80]; end
-    assert_equal(1267651809154049016125877911552, (2**100) + o)
+    assert_equal("1267651809154049016125877911552".to_i, (2**100) + o)
   end
 
   assert('Bignum', 'test_minus') do
