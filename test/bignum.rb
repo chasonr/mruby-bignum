@@ -181,7 +181,12 @@
 
   assert('Bignum', 'test_to_s2') do
     assert_raise(ArgumentError) { T31P.to_s(37) }
-    assert_equal("9" * 32768, (10**32768-1).to_s)
+    if Float === 32768 then
+      # MRB_INT16 configured
+      assert_equal("9" * 16000, (10**16000-1).to_s)
+    else
+      assert_equal("9" * 32768, (10**32768-1).to_s)
+    end
     #NotImp assert_raise(RangeError) { Process.wait(1, T64P) }
     assert_equal("0", T_ZERO.to_s)
     assert_equal("1", T_ONE.to_s)
@@ -208,7 +213,7 @@
     assert_not_equal(T31P, 1)
     assert_equal(T31P, 2147483647.0)
     assert_not_equal(T31P, "foo")
-    assert_not_equal(2**77889, (1.0/0.0), '[ruby-core:31603]')
+    assert_not_equal(2**77889.to_big, (1.0/0.0), '[ruby-core:31603]')
   end
 
   assert('Bignum', 'test_eql') do
@@ -447,7 +452,7 @@
     assert_raise(TypeError, ArgumentError) { T32**"foo" }
 
     feature3429 = '[ruby-core:30735]'
-    assert_true((2 ** 7830457).is_a?(Bignum), feature3429)
+    assert_true((2 ** 7830457.to_big).is_a?(Bignum), feature3429)
   end
 
   assert('Bignum', 'test_and') do
@@ -542,7 +547,7 @@
 
   assert('Bignum', 'test_shift_bigshift') do
     big = 2**300
-    assert_equal(2**65538 / (2**65537), 2**65538 >> big.coerce(65537).first)
+    assert_equal(2**65538.to_big / (2**65537.to_big), 2**65538.to_big >> big.coerce(65537.to_big).first)
   end
 
 =begin # Array reference not implemented
