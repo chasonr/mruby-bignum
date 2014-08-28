@@ -2041,10 +2041,12 @@ static struct Bignum *
 bn_from_str_recursive(
         mrb_state *mrb,
         char const *str, size_t str_len,
-        unsigned base)
+        unsigned base,
+        struct BignumDivisor const *divisors)
 {
   size_t split;
-  struct Bignum *lnum, *rnum, *bbase, *mul, *prod, *num;
+  struct BignumDivisor const *divisor;
+  struct Bignum *lnum, *rnum, *mul, *prod, *num;
 
   /* Remove leading zeros */
   while ((*str == '0' || *str == '_') && str_len != 0) {
@@ -2059,17 +2061,15 @@ bn_from_str_recursive(
   }
 
   /* Convert upper and lower halves */
-  split = str_len / 2;
-  lnum = bn_from_str_recursive(mrb, str, str_len - split, base);
-  rnum = bn_from_str_recursive(mrb, str + str_len - split, split, base);
-  bbase = fixnum_to_bignum(mrb, base);
-  mul = bn_pow(mrb, bbase, split);
+  divisor = bn_find_divisor(divisors, str_len);
+  split = divisor->power;
+  mul = divisor->divisor;
+  lnum = bn_from_str_recursive(mrb, str, str_len - split, base, divisors);
+  rnum = bn_from_str_recursive(mrb, str + str_len - split, split, base, divisors);
   prod = bn_mul(mrb, lnum, mul);
   num = bn_add(mrb, prod, rnum, FALSE);
   bn_free(mrb, lnum);
   bn_free(mrb, rnum);
-  bn_free(mrb, bbase);
-  bn_free(mrb, mul);
   bn_free(mrb, prod);
 
   return num;
@@ -2159,7 +2159,12 @@ bn_from_str(mrb_state *mrb, char const *str, size_t str_len, unsigned base)
   else {
     /* General conversion algorithm */
 #ifdef MRB_BIGNUM_ENABLE_RECURSION
-    num = bn_from_str_recursive(mrb, str2, str2_len, base);
+    {
+      struct BignumDivisor *divisors;
+      divisors = bn_compute_divisors(mrb, str2_len, base);
+      num = bn_from_str_recursive(mrb, str2, str2_len, base, divisors);
+      bn_free_divisors(mrb, divisors);
+    }
 #else
     num = bn_from_str_basic(mrb, str2, str2_len, base);
 #endif
