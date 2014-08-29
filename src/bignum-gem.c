@@ -2533,7 +2533,9 @@ fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
     }
 #endif
     if (carry) {
-/* FIXME:  How does this interact with boxing? */
+      /* We don't need to take word boxing into account.  If word boxing is
+         in effect, mrb_uint is one bit wider than a Fixnum, and the add
+         will never carry. */
 #if MRB_INT_BIT >= MRB_BIGNUM_BIT
       bsum->digits[FIXNUM_DIGITS] = 0x1;
 #else
