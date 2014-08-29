@@ -2487,20 +2487,34 @@ float_eq(mrb_state *mrb, mrb_value self)
 static mrb_value
 fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
 {
-  mrb_bool sx = x < 0;
-  mrb_uint ux = x < 0 ? -(mrb_uint)x : +(mrb_uint)x;
-  mrb_bool sy = (y < 0) ^ (subtract != 0);
-  mrb_uint uy = y < 0 ? -(mrb_uint)y : +(mrb_uint)y;
+  mrb_bool sx, sy;
+  mrb_uint ux, uy;
   mrb_bool ssum;
   mrb_uint usum;
   mrb_value sum;
-  mrb_bool carry;
 
+#ifndef MRB_WORD_BOXING
+  /* Because overflow in signed arithmetic invokes undefined behavior, the
+     signed arithmetic is converted to unsigned.  This has the added effect
+     of avoiding overflow altogether, except in one single corner case; and
+     even that does not occur if word boxing is enabled, because that narrows
+     Fixnum by one bit without changing the mrb_uint type. */
+  if (!subtract && x == MRB_INT_MIN && y == MRB_INT_MIN) {
+    struct Bignum *bsum = bn_alloc(mrb, FIXNUM_DIGITS + 1);
+    bsum->digits[FIXNUM_DIGITS] = 1;
+    bsum->negative = TRUE;
+    return new_bignum(mrb, bsum, TRUE);
+  }
+#endif
+
+  sx = x < 0;
+  ux = x < 0 ? -(mrb_uint)x : +(mrb_uint)x;
+  sy = (y < 0) ^ (subtract != 0);
+  uy = y < 0 ? -(mrb_uint)y : +(mrb_uint)y;
   if (sx == sy) {
     /* Add */
     ssum = sx;
     usum = ux + uy;
-    carry = usum < ux;
   }
   else {
     /* Subtract */
@@ -2512,11 +2526,9 @@ fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
       ssum = sy;
       usum = uy - ux;
     }
-    carry = 0;
   }
   /* Propagate carry */
-  if (carry
-  ||  ( ssum && usum > (mrb_uint)MRB_INT_MAX+1)
+  if (( ssum && usum > (mrb_uint)MRB_INT_MAX+1)
   |   (!ssum && usum > (mrb_uint)MRB_INT_MAX+0)) {
     /* Overflow; return a Bignum */
     struct Bignum *bsum = bn_alloc(mrb, FIXNUM_DIGITS + 1);
@@ -2532,16 +2544,6 @@ fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
       }
     }
 #endif
-    if (carry) {
-      /* We don't need to take word boxing into account.  If word boxing is
-         in effect, mrb_uint is one bit wider than a Fixnum, and the add
-         will never carry. */
-#if MRB_INT_BIT >= MRB_BIGNUM_BIT
-      bsum->digits[FIXNUM_DIGITS] = 0x1;
-#else
-      bsum->digits[0] |= (bn_digit)1 << MRB_INT_BIT;
-#endif
-    }
     sum = new_bignum(mrb, bsum, TRUE);
   }
   else {
