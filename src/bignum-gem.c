@@ -2529,7 +2529,7 @@ fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
   }
   /* Propagate carry */
   if (( ssum && usum > (mrb_uint)MRB_INT_MAX+1)
-  |   (!ssum && usum > (mrb_uint)MRB_INT_MAX+0)) {
+  ||  (!ssum && usum > (mrb_uint)MRB_INT_MAX+0)) {
     /* Overflow; return a Bignum */
     struct Bignum *bsum = bn_alloc(mrb, FIXNUM_DIGITS + 1);
     bsum->negative = ssum;
