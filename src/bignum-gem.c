@@ -259,7 +259,7 @@ bignum_to_int64(struct Bignum const *num)
     overflow = ufix > INT64_MAX;
   }
   if (!overflow) {
-    return num->negative ? -(int64_t)ufix : +(int64_t)ufix;
+    return (int64_t)(num->negative ? -ufix : +ufix);
   }
   else {
     return INT64_MIN;
@@ -2488,9 +2488,9 @@ static mrb_value
 fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
 {
   mrb_bool sx = x < 0;
-  mrb_uint ux = x < 0 ? -x : +x;
+  mrb_uint ux = x < 0 ? -(mrb_uint)x : +(mrb_uint)x;
   mrb_bool sy = (y < 0) ^ (subtract != 0);
-  mrb_uint uy = y < 0 ? -y : +y;
+  mrb_uint uy = y < 0 ? -(mrb_uint)y : +(mrb_uint)y;
   mrb_bool ssum;
   mrb_uint usum;
   mrb_value sum;
@@ -2544,7 +2544,7 @@ fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
   }
   else {
     /* Return a Fixnum */
-    sum = mrb_fixnum_value(ssum ? -(mrb_int)usum : +(mrb_int)usum);
+    sum = mrb_fixnum_value((mrb_int)(ssum ? -usum : +usum));
   }
 
   return sum;
