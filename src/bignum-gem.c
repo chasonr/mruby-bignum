@@ -921,23 +921,21 @@ bn_div_basic(
   trial_denom = in2[in2_size-1U];   /* top MRB_BIGNUM_BIT bits */
   trial_denom_offset = in2_size-1U; /* index of in2 where trial_denom bit 0 lies */
   trial_denom_shift = 0U;           /* number of bits to the right of trial_denom */
-  if (in2_size > 1U) {
-    /* Shift trial_denom so the top bit is 1 */
-    while ((trial_denom & ((bn_digit)1 << (MRB_BIGNUM_BIT-1))) == 0U) {
-      ++trial_denom_shift;
-      trial_denom <<= 1;
-    }
-    /* Add bits from the second most significant digit */
-    if (trial_denom_shift != 0) {
-      trial_denom_shift = MRB_BIGNUM_BIT - trial_denom_shift;
-      trial_denom |= in2[in2_size-2U] >> trial_denom_shift;
-      --trial_denom_offset;
-    }
-    /* Overstate the trial denominator so arithmetic does not overflow */
-    ++trial_denom;
-    /* The above increment may overflow.  If that happens, trial_denom is
-       equal to 0.  That case is handled specially in the main loop. */
+  /* Shift trial_denom so the top bit is 1 */
+  while ((trial_denom & ((bn_digit)1 << (MRB_BIGNUM_BIT-1))) == 0U) {
+    ++trial_denom_shift;
+    trial_denom <<= 1;
   }
+  /* Add bits from the second most significant digit */
+  if (trial_denom_shift != 0) {
+    trial_denom_shift = MRB_BIGNUM_BIT - trial_denom_shift;
+    trial_denom |= in2[in2_size-2U] >> trial_denom_shift;
+    --trial_denom_offset;
+  }
+  /* Overstate the trial denominator so arithmetic does not overflow */
+  ++trial_denom;
+  /* The above increment may overflow.  If that happens, trial_denom is
+     equal to 0.  That case is handled specially in the main loop. */
 
   /* Invariant for the main loop:  quo * in2 + prem = in1 */
   /* When prem < in2, quo is the final quotient and prem is the final
@@ -1303,7 +1301,7 @@ bn_bitwise(mrb_state *mrb, struct Bignum const *in1, struct Bignum const *in2,
         bn_digit (*op)(bn_digit in1, bn_digit in2))
 {
   size_t i;
-  bn_digit dig1, dig2, sign;
+  bn_digit dig1, dig2;
   struct Bignum *out;
   mrb_bool not1, not2;
 
@@ -1358,13 +1356,11 @@ bn_bitwise(mrb_state *mrb, struct Bignum const *in1, struct Bignum const *in2,
   }
 
   /* Sign bits */
-  dig1 = in1->negative ? (bn_digit)-1 : 0;
-  sign = (*op)(dig1, dig2);
-  out->negative = sign != 0;
+  out->negative = (*op)(in1->negative, in2->negative);
   if (out->negative) {
     for (i = 0; i < out->len && out->digits[i] == 0; ++i) {}
     if (i < out->len) {
-      out->digits[i] = ~out->digits[i] + 1;
+      out->digits[i] = -out->digits[i];
       ++i;
     }
     for (; i < out->len; ++i) {
