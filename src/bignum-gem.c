@@ -2813,7 +2813,7 @@ fix_fix_mul(mrb_state *mrb, mrb_int x, mrb_int y)
 #  elif MRB_INT_BIT == 32
   static const mrb_int mul_max = 46340;
 #  else
-  static const mrb_int mul_max = 3037000500;
+  static const mrb_int mul_max = 3037000499;
 #  endif
 #endif
 

@@ -738,3 +738,29 @@
     end
     assert_equal(T1024 ^ 10, T1024 ^ obj)
   end
+
+  assert('Bignum', 'test multiply Fixnum optimization') do
+    case FIXNUM_MAX
+    when 0x7FFF then
+        # 16 bit Fixnum, no word boxing
+        assert_equal(181 * 181, 32761)
+        assert_equal(182 * 182, "33124".to_big)
+    when 0x3FFFFFFF then
+        # 31 bit Fixnum, word boxing
+        assert_equal(32767 * 32767, 1073676289)
+        assert_equal(32768 * 32768, "1073741824".to_big)
+    when 0x7FFFFFFF then
+        # 32 bit Fixnum, no word boxing
+        assert_equal(46340 * 46340, 2147395600)
+        assert_equal(46341 * 46341, "1904536881".to_big)
+    when 0x3FFFFFFFFFFFFFFF then
+        # 63 bit Fixnum, no word boxing
+        assert_equal(2147483647 * 2147483647, 4611686014132420609)
+        assert_equal(2147483648 * 2147483648, "4611686018427387904".to_big)
+    when 0x7FFFFFFFFFFFFFFF then
+        assert_equal(3037000499 * 3037000499, 9223372030926249001)
+        assert_equal(3037000500 * 3037000500, "9223372037000250000".to_big)
+    else
+        skip "Unexpected FIXNUM_MAX (0x#{FIXNUM_MAX.to_i(16)})"
+    end
+  end
