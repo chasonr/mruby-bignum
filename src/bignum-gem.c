@@ -607,6 +607,57 @@ bn_mul_basic(
 }
 
 #ifdef MRB_BIGNUM_ENABLE_RECURSION
+static void
+bn_mul_recursive(
+        mrb_state *mrb,
+        bn_digit *out, /* Size is in1_size + in2_size */
+        const bn_digit *in1, size_t in1_size,
+        const bn_digit *in2, size_t in2_size);
+
+/* "Single digit" multiply, where the "digit" has the size of in2 */
+/* Use when in1_size >= in2_size*2 */
+static void
+bn_mul_lopsided(
+        mrb_state *mrb,
+        bn_digit *out, /* Size is in1_size + in2_size */
+        const bn_digit *in1, size_t in1_size,
+        const bn_digit *in2, size_t in2_size)
+{
+  size_t out_size = in1_size + in2_size;
+  bn_digit *pprod;
+  size_t pprod_size;
+  size_t i;
+
+  /* Zero fill the output so we can add into it */
+  memset(out, 0, sizeof(out[0]) * out_size);
+
+  /* Remove leading zeros */
+  while (in1_size != 0U && in1[in1_size-1U] == 0U) {
+    out[--out_size] = 0U;
+  }
+  while (in2_size != 0U && in2[in2_size-1U] == 0U) {
+    out[--out_size] = 0U;
+  }
+
+  /* Allocate partial product */
+  pprod_size = in2_size * 2;
+  pprod = mrb_calloc(mrb, pprod_size, sizeof(pprod[0]));
+
+  /* Main loop */
+  for (i = 0; i < in1_size; i += in2_size) {
+    size_t in1part_size = in1_size - i;
+    size_t pprod_size2;
+    if (in1part_size > in2_size) {
+      in1part_size = in2_size;
+    }
+    bn_mul_recursive(mrb, pprod, in1+i, in1part_size, in2, in2_size);
+    pprod_size2 = in1part_size + in2_size;
+    bn_add_basic(out+i, out+i, pprod_size2, pprod, pprod_size2);
+  }
+
+  mrb_free(mrb, pprod);
+}
+
 /* Multiply:  Karatsuba algorithm */
 static void
 bn_mul_recursive(
@@ -632,25 +683,30 @@ bn_mul_recursive(
     --in2_size;
   }
 
+  /* Let in1 be the longer input */
+  if (in1_size < in2_size) {
+    bn_digit const *sp;
+    size_t sl;
+    sp = in1;
+    in1 = in2;
+    in2 = sp;
+    sl = in1_size;
+    in1_size = in2_size;
+    in2_size = sl;
+  }
+
   /* Basis of recursion */
-  if (in1_size < MRB_BIGNUM_MUL_RECURSION_CUTOFF
-  ||  in2_size < MRB_BIGNUM_MUL_RECURSION_CUTOFF) {
+  if (in2_size < MRB_BIGNUM_MUL_RECURSION_CUTOFF) {
     bn_mul_basic(out, in1, in1_size, in2, in2_size);
     return;
   }
 
   /* Split the inputs */
-  if (in1_size < in2_size) {
-    split = in2_size / 2;
-    if (split > in1_size) {
-      split = in1_size;
-    }
-  }
-  else {
-    split = in1_size / 2;
-    if (split > in2_size) {
-      split = in2_size;
-    }
+  split = in1_size / 2;
+  if (split >= in2_size) {
+    /* Go to "lopsided" multiply if that can be done to advantage */
+    bn_mul_lopsided(mrb, out, in1, in1_size, in2, in2_size);
+    return;
   }
   in1lo = in1;
   in1lo_size = split;
