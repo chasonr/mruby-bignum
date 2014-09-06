@@ -4444,7 +4444,16 @@ static mrb_value
 float_ceil(mrb_state *mrb, mrb_value self)
 {
   mrb_float fltself = mrb_float(self);
-  struct Bignum *bigself = float_to_bignum(mrb, F(ceil)(fltself));
+  struct Bignum *bigself;
+
+  if (isnan(fltself)) {
+    mrb_raise(mrb, E_FLOATDOMAIN_ERROR, "NaN");
+  }
+  if (isinf(fltself)) {
+    mrb_raise(mrb, E_FLOATDOMAIN_ERROR, fltself < 0 ? "-Infinity" : "Infinity");
+  }
+
+  bigself = float_to_bignum(mrb, F(ceil)(fltself));
   return new_bignum(mrb, bigself, FIXNUM_CONVERT);
 }
 
@@ -4453,7 +4462,16 @@ static mrb_value
 float_floor(mrb_state *mrb, mrb_value self)
 {
   mrb_float fltself = mrb_float(self);
-  struct Bignum *bigself = float_to_bignum(mrb, F(floor)(fltself));
+  struct Bignum *bigself;
+
+  if (isnan(fltself)) {
+    mrb_raise(mrb, E_FLOATDOMAIN_ERROR, "NaN");
+  }
+  if (isinf(fltself)) {
+    mrb_raise(mrb, E_FLOATDOMAIN_ERROR, fltself < 0 ? "-Infinity" : "Infinity");
+  }
+
+  bigself = float_to_bignum(mrb, F(floor)(fltself));
   return new_bignum(mrb, bigself, FIXNUM_CONVERT);
 }
 
