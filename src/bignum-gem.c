@@ -4387,7 +4387,7 @@ bignum_hash(mrb_state *mrb, mrb_value self)
 
   for (i = 0; i < bigself->len; ++i) {
     bn_digit digit = bigself->digits[i];
-    for (j = 0; j < MRB_BIGNUM_BIT; ++j) {
+    for (j = 0; j < MRB_BIGNUM_BIT; j += 8) {
       key = key*65599 + (digit & 0xFF);
       digit >>= 8;
     }
