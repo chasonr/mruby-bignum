@@ -4008,6 +4008,19 @@ big_fix_lshift(mrb_state *mrb, mrb_value self, int64_t other)
   return new_bignum(mrb, out, FIXNUM_CONVERT);
 }
 
+/* Result of right shift that is deemed too large */
+static mrb_value
+big_rshift_large(mrb_state *mrb, mrb_value self)
+{
+  struct Bignum *bigself = DATA_PTR(self);
+  int result = bigself->negative ? -1 : 0;
+#if FIXNUM_CONVERT
+  return mrb_fixnum_value(result);
+#else
+  return new_bignum(mrb, fixnum_to_bignum(mrb, result), FALSE);
+#endif
+}
+
 /* 15.2.8.3.12 Integer#<< */
 static mrb_value
 fixnum_lshift(mrb_state *mrb, mrb_value self)
@@ -4088,8 +4101,7 @@ bignum_lshift(mrb_state *mrb, mrb_value self)
       int64_t fixother = bignum_to_int64(bigother);
       if (fixother == INT64_MIN) {
         if (bigother->negative) {
-          struct Bignum *bigself = DATA_PTR(self);
-          out = mrb_fixnum_value(bigself->negative ? -1 : 0);
+          out = big_rshift_large(mrb, self);
         }
         else {
           mrb_raise(mrb, E_RANGE_ERROR, "shift width too big");
@@ -4106,8 +4118,7 @@ bignum_lshift(mrb_state *mrb, mrb_value self)
     {
       mrb_float fltother = mrb_float(other);
       if (fltother < INT64_MIN) {
-        struct Bignum *bigself = DATA_PTR(self);
-        out = mrb_fixnum_value(bigself->negative ? -1 : 0);
+        out = big_rshift_large(mrb, self);
       }
       else if (fltother > INT64_MAX) {
         mrb_raise(mrb, E_RANGE_ERROR, "shift width too big");
@@ -4233,8 +4244,7 @@ bignum_rshift(mrb_state *mrb, mrb_value self)
       if (fixother == INT64_MIN) {
         struct Bignum *bigother = DATA_PTR(other);
         if (!bigother->negative) {
-          struct Bignum *bigself = DATA_PTR(self);
-          out = mrb_fixnum_value(bigself->negative ? -1 : 0);
+          out = big_rshift_large(mrb, self);
         }
         else {
           mrb_raise(mrb, E_RANGE_ERROR, "shift width too big");
@@ -4251,8 +4261,7 @@ bignum_rshift(mrb_state *mrb, mrb_value self)
     {
       mrb_float fltother = mrb_float(other);
       if (fltother > INT64_MAX) {
-        struct Bignum *bigself = DATA_PTR(self);
-        out = mrb_fixnum_value(bigself->negative ? -1 : 0);
+        out = big_rshift_large(mrb, self);
       }
       else if (fltother < INT64_MIN) {
         mrb_raise(mrb, E_RANGE_ERROR, "shift width too big");
