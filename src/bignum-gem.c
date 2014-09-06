@@ -3987,16 +3987,47 @@ bignum_xor(mrb_state *mrb, mrb_value self)
 /* "<<" */
 /* ------------------------------------------------------------------------*/
 
+/* Optimized right shift for Fixnum (don't convert to Bignum) */
+static mrb_value
+fix_fix_rshift_u(mrb_state *mrb, mrb_int self, uint64_t other)
+{
+  /* Avoid undefined behavior */
+  if (other >= MRB_INT_BIT) {
+    return mrb_fixnum_value((self < 0) ? -1 : 0);
+  }
+
+  /* C does not specify whether signs are kept when a negative number is
+     shifted right, so shift positive numbers only; also round division
+     downward */
+  if (self >= 0) {
+    return mrb_fixnum_value(self >> other);
+  }
+  else {
+    mrb_uint u1, u2;
+    /* Compute as -(-self >> other) */
+    u1 = -(mrb_uint)self;
+    u2 = u1 >> other;
+    if ((u2 << other) != u1) {
+      ++u2;
+    }
+    return mrb_fixnum_value((mrb_int)-u2);
+  }
+}
+
 /* Fixnum << Fixnum */
 static mrb_value
 fix_fix_lshift(mrb_state *mrb, mrb_int self, int64_t other)
 {
-  /* TODO:  small number optimization */
-  struct Bignum *bigself = fixnum_to_bignum(mrb, self);
-  struct Bignum *out = bn_lshift(mrb, bigself, other);
+  if (other < 0) {
+    return fix_fix_rshift_u(mrb, self, -other);
+  }
+  else {
+    struct Bignum *bigself = fixnum_to_bignum(mrb, self);
+    struct Bignum *out = bn_lshift(mrb, bigself, other);
 
-  bn_free(mrb, bigself);
-  return new_bignum(mrb, out, TRUE);
+    bn_free(mrb, bigself);
+    return new_bignum(mrb, out, TRUE);
+  }
 }
 
 /* Bignum << Fixnum */
@@ -4146,11 +4177,16 @@ bignum_lshift(mrb_state *mrb, mrb_value self)
 static mrb_value
 fix_fix_rshift(mrb_state *mrb, mrb_int self, int64_t other)
 {
-  struct Bignum *bigself = fixnum_to_bignum(mrb, self);
-  struct Bignum *out = bn_rshift(mrb, bigself, other);
+  if (other >= 0) {
+    return fix_fix_rshift_u(mrb, self, +other);
+  }
+  else {
+    struct Bignum *bigself = fixnum_to_bignum(mrb, self);
+    struct Bignum *out = bn_rshift(mrb, bigself, other);
 
-  bn_free(mrb, bigself);
-  return new_bignum(mrb, out, TRUE);
+    bn_free(mrb, bigself);
+    return new_bignum(mrb, out, TRUE);
+  }
 }
 
 /* Bignum >> Fixnum */
