@@ -3570,6 +3570,23 @@ big_fix_pow(mrb_state *mrb, struct Bignum const *x, int64_t y, mrb_bool fixnum_c
 {
   struct Bignum *z;
 
+  if (y == 0) {
+    return mrb_fixnum_value(1);
+  }
+  if (x->len == 1 && x->digits[0] == 1) {
+    return mrb_fixnum_value((x->negative && (y & 1) != 0) ? -1 : +1);
+  }
+  if (x->len == 0) {
+    if (y > 0) {
+      return mrb_fixnum_value(0);
+    }
+    else {
+      mrb_raise(mrb, mrb_class_get(mrb, "ZeroDivisionError"),
+              "negative power of zero");
+      return mrb_nil_value();
+    }
+  }
+
   if (y < 0) {
     return mrb_float_value(mrb, F(pow)(bn_to_float(x), y));
   }
@@ -3581,8 +3598,28 @@ big_fix_pow(mrb_state *mrb, struct Bignum const *x, int64_t y, mrb_bool fixnum_c
 static mrb_value
 fix_fix_pow(mrb_state *mrb, mrb_int x, mrb_int y)
 {
-  struct Bignum *bigx = fixnum_to_bignum(mrb, x);
-  mrb_value z = big_fix_pow(mrb, bigx, y, TRUE);
+  struct Bignum *bigx;
+  mrb_value z;
+
+  if (x == 1 || y == 0) {
+    return mrb_fixnum_value(1);
+  }
+  if (x == 0) {
+    if (y > 0) {
+      return mrb_fixnum_value(0);
+    }
+    else {
+      mrb_raise(mrb, mrb_class_get(mrb, "ZeroDivisionError"),
+              "negative power of zero");
+      return mrb_nil_value();
+    }
+  }
+  if (x == -1) {
+    return mrb_fixnum_value((y & 1) ? -1 : +1);
+  }
+
+  bigx = fixnum_to_bignum(mrb, x);
+  z = big_fix_pow(mrb, bigx, y, TRUE);
   bn_free(mrb, bigx);
   return z;
 }
@@ -3591,6 +3628,23 @@ static mrb_value
 big_big_pow(mrb_state *mrb, struct Bignum const *x, struct Bignum const *y, mrb_bool fixnum_conv)
 {
   mrb_value z;
+
+  if (y->len == 0) {
+    return mrb_fixnum_value(1);
+  }
+  if (x->len == 1 && x->digits[0] == 1) {
+    return mrb_fixnum_value((x->negative && (y->digits[0] & 1) != 0) ? -1 : +1);
+  }
+  if (x->len == 0) {
+    if (!y->negative) {
+      return mrb_fixnum_value(0);
+    }
+    else {
+      mrb_raise(mrb, mrb_class_get(mrb, "ZeroDivisionError"),
+              "negative power of zero");
+      return mrb_nil_value();
+    }
+  }
 
   if (y->negative) {
     z = mrb_float_value(mrb, F(pow)(bn_to_float(x), bn_to_float(y)));
@@ -3608,8 +3662,28 @@ big_big_pow(mrb_state *mrb, struct Bignum const *x, struct Bignum const *y, mrb_
 static mrb_value
 fix_big_pow(mrb_state *mrb, mrb_int x, struct Bignum const *y)
 {
-  struct Bignum *bigx = fixnum_to_bignum(mrb, x);
-  mrb_value z = big_big_pow(mrb, bigx, y, TRUE);
+  struct Bignum *bigx;
+  mrb_value z;
+
+  if (x == 1 || y->len == 0) {
+    return mrb_fixnum_value(1);
+  }
+  if (x == 0) {
+    if (!y->negative) {
+      return mrb_fixnum_value(0);
+    }
+    else {
+      mrb_raise(mrb, mrb_class_get(mrb, "ZeroDivisionError"),
+              "negative power of zero");
+      return mrb_nil_value();
+    }
+  }
+  if (x == -1) {
+    return mrb_fixnum_value((y->digits[0] & 1) ? -1 : +1);
+  }
+
+  bigx = fixnum_to_bignum(mrb, x);
+  z = big_big_pow(mrb, bigx, y, TRUE);
   bn_free(mrb, bigx);
   return z;
 }
