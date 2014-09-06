@@ -4431,7 +4431,7 @@ bignum_to_s(mrb_state *mrb, mrb_value self)
 
   str = bn_to_str(mrb, bigself, base);
   rstr = mrb_str_new_cstr(mrb, str);
-  bn_free(mrb, str);
+  mrb_free(mrb, str);
   return rstr;
 }
 
