@@ -38,3 +38,22 @@ The `to_big` and `to_fix` methods are provided to ease the use of mruby-bignum w
 
 * `to_big` converts its receiver (a Fixnum, Bignum, Float or String) to an integer by the same rules as `to_i`, but always returns a Bignum.
 * `to_fix` converts its receiver (a Fixnum, Bignum, Float or String) to an integer by the same rules as `to_i`, but always attempts to convert to Fixnum, even with the mainline mruby.  It returns a Bignum if the integer is too large for a Fixnum.
+
+Other integer conversion methods (`to_i`, `to_int`, `ceil` and `floor`) return a Fixnum if possible when used with bignum-support, and always a Bignum when used with mainline mruby.
+
+## Available methods
+
+The following methods are provided, or modified from the original mruby:
+
+* `Numeric#coerce(rhs)` implements `coerce` according to the ISO standard.
+* `Fixnum#coerce` and `Bignum#coerce` override `Numeric#coerce` so that a combination of Fixnum and Bignum returns two Bignums instead of two Floats.
+* `<=>`, `==` and `eql?` are extended so that Bignums can be compared.
+* `+`, `-`, `*`, `%`, `divmod`, `<<`, `>>` and `**` are extended so that Bignums can occur as operands.  If a result exceeds the range of Fixnum, a Bignum is produced.
+* `&`, `|` and `^` are extended to work with Bignums.
+* `/` replaces the nonconformant behavior of mruby's `/` with an ISO-conformant one -- return an integer, rounded down -- and works with Bignum operands and produces Bignum results.
+* `quo` is not part of the ISO standard, but is documented in CRuby as producing the most exact quotient, which for integer inputs is a Rational.  The mruby-bignum gem does not implement Rational, and so `quo` produces a Float.  It is extended to work with Bignums.
+* `to_big` and `to_fix` are modified forms of `to_i`, described above, to mitigate issues arising when using mruby-bignum with the mainline mruby.
+* `hash` is defined, so that Bignums can act as hash keys.
+* `to_f`, `to_s` and `inspect` are provided for Bignum receivers.
+* `ceil` and `floor` are redefined for Floats so they return a Bignum, as the ISO standard provides.
+* `to_i` and `to_int` are redefined for Float and String receivers to produce a Bignum if the result is too large for a Fixnum.
