@@ -41,6 +41,14 @@ The `to_big` and `to_fix` methods are provided to ease the use of mruby-bignum w
 
 Other integer conversion methods (`to_i`, `to_int`, `ceil` and `floor`) return a Fixnum if possible when used with bignum-support, and always a Bignum when used with mainline mruby.
 
+## Configuration
+
+The file include/bignum-conf.h may be edited to tune the performance of mruby-bignum:
+
+* `MRB_BIGNUM_BIT` may be set to 16, 32 or 64 to determine the number of bits in a Bignum digit.  This may be set independently of the width of a Fixnum.  It should be equal to the largest word size at which the platform can natively do arithmetic.  `MRB_BIGNUM_BIT` can be set to 64 only if the compiler supports `unsigned __int128`; this is true of Visual C++, Clang and GCC when compiling for 64 bit platforms.
+* `MRB_BIGNUM_ENABLE_RECURSION` enables recursive (Karatsuba) multiplication and all algorithms that depend on it for their efficiency.  Removing this will reduce the compiled size of mruby-bignum by a few kilobytes, but the resulting Bignums are substantially slower.
+* The three symbols `MRB_BIGNUM_{MUL,DIV,SQR}_RECURSION_CUTOFF` set the number of digits at which the recursive algorithms are used.  The number of bits is this limit times `MRB_BIGNUM_BIT`.  Adjusting these may improve performance, depending on the platform.
+
 ## Available methods
 
 The following methods are provided, or modified from the original mruby:
