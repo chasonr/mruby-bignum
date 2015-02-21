@@ -754,10 +754,11 @@
         assert_equal(46340 * 46340, 2147395600)
         assert_equal(46341 * 46341, "2147488281".to_big)
     when 0x3FFFFFFFFFFFFFFF then
-        # 63 bit Fixnum, no word boxing
+        # 63 bit Fixnum, word boxing
         assert_equal(2147483647 * 2147483647, 4611686014132420609)
         assert_equal(2147483648 * 2147483648, "4611686018427387904".to_big)
     when 0x7FFFFFFFFFFFFFFF then
+        # 64 bit Fixnum, no word boxing
         assert_equal(3037000499 * 3037000499, 9223372030926249001)
         assert_equal(3037000500 * 3037000500, "9223372037000250000".to_big)
     else
