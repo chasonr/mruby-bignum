@@ -2,7 +2,7 @@
 
   def fact(n)
     return 1 if n == 0
-    f = 1.to_big
+    f = 1.to_bn
     while n>0
       f *= n
       n -= 1
@@ -53,7 +53,7 @@
     a = b * 9 + 7
     assert_equal(7, a % b) # was: modulo
     assert_equal(-b + 7, a % -b) # was: modulo
-    assert_equal(b + -7.to_big, -a % b) # was: modulo; issue #2557 avoided here
+    assert_equal(b + -7.to_bn, -a % b) # was: modulo; issue #2557 avoided here
     assert_equal(-7, -a % -b) # was: modulo
     #NotImp assert_equal(7, a % b) # was: remainder
     #NotImp assert_equal(7, a % -b) # was: remainder
@@ -213,7 +213,7 @@
     assert_not_equal(T31P, 1)
     assert_equal(T31P, 2147483647.0)
     assert_not_equal(T31P, "foo")
-    assert_not_equal(2**77889.to_big, (1.0/0.0), '[ruby-core:31603]')
+    assert_not_equal(2**77889.to_bn, (1.0/0.0), '[ruby-core:31603]')
   end
 
   assert('Bignum', 'test_eql') do
@@ -452,7 +452,7 @@
     assert_raise(TypeError, ArgumentError) { T32**"foo" }
 
     feature3429 = '[ruby-core:30735]'
-    assert_true((2 ** 7830457.to_big).is_a?(Bignum), feature3429)
+    assert_true((2 ** 7830457.to_bn).is_a?(Bignum), feature3429)
   end
 
   assert('Bignum', 'test_and') do
@@ -547,7 +547,7 @@
 
   assert('Bignum', 'test_shift_bigshift') do
     big = 2**300
-    assert_equal(2**65538.to_big / (2**65537.to_big), 2**65538.to_big >> big.coerce(65537.to_big).first)
+    assert_equal(2**65538.to_bn / (2**65537.to_bn), 2**65538.to_bn >> big.coerce(65537.to_bn).first)
   end
 
 =begin # Array reference not implemented
@@ -744,23 +744,23 @@
     when 0x7FFF then
         # 16 bit Fixnum, no word boxing
         assert_equal(181 * 181, 32761)
-        assert_equal(182 * 182, "33124".to_big)
+        assert_equal(182 * 182, "33124".to_bn)
     when 0x3FFFFFFF then
         # 31 bit Fixnum, word boxing
         assert_equal(32767 * 32767, 1073676289)
-        assert_equal(32768 * 32768, "1073741824".to_big)
+        assert_equal(32768 * 32768, "1073741824".to_bn)
     when 0x7FFFFFFF then
         # 32 bit Fixnum, no word boxing
         assert_equal(46340 * 46340, 2147395600)
-        assert_equal(46341 * 46341, "2147488281".to_big)
+        assert_equal(46341 * 46341, "2147488281".to_bn)
     when 0x3FFFFFFFFFFFFFFF then
         # 63 bit Fixnum, word boxing
         assert_equal(2147483647 * 2147483647, 4611686014132420609)
-        assert_equal(2147483648 * 2147483648, "4611686018427387904".to_big)
+        assert_equal(2147483648 * 2147483648, "4611686018427387904".to_bn)
     when 0x7FFFFFFFFFFFFFFF then
         # 64 bit Fixnum, no word boxing
         assert_equal(3037000499 * 3037000499, 9223372030926249001)
-        assert_equal(3037000500 * 3037000500, "9223372037000250000".to_big)
+        assert_equal(3037000500 * 3037000500, "9223372037000250000".to_bn)
     else
         skip "Unexpected FIXNUM_MAX (0x#{FIXNUM_MAX.to_i(16)})"
     end
