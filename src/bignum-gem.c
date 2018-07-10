@@ -4688,7 +4688,7 @@ string_to_i(mrb_state *mrb, mrb_value self)
 }
 
 /* ------------------------------------------------------------------------*/
-/* "to_bn" */
+/* "to_big" */
 /* ------------------------------------------------------------------------*/
 
 static mrb_value
@@ -4876,7 +4876,7 @@ mrb_mruby_bignum_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, fixnum, "<<",       fixnum_lshift, MRB_ARGS_REQ(1)); /* 15.2.8.3.12 */
   mrb_define_method(mrb, fixnum, ">>",       fixnum_rshift, MRB_ARGS_REQ(1)); /* 15.2.8.3.13 */
   mrb_define_method(mrb, fixnum, "eql?",     fixnum_eql,    MRB_ARGS_REQ(1)); /* 15.2.8.3.16 */
-  mrb_define_method(mrb, fixnum, "to_bn",    fixnum_to_big, MRB_ARGS_NONE());
+  mrb_define_method(mrb, fixnum, "to_big",   fixnum_to_big, MRB_ARGS_NONE());
   mrb_define_method(mrb, fixnum, "to_fix",   fixnum_to_fix, MRB_ARGS_NONE());
   mrb_define_method(mrb, fixnum, "divmod",   fixnum_divmod, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, fixnum, "quo",      fixnum_quo,    MRB_ARGS_REQ(1));
@@ -4906,7 +4906,7 @@ mrb_mruby_bignum_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, bignum, "to_f",     bignum_to_f,   MRB_ARGS_NONE()); /* 15.2.8.3.23 */
   mrb_define_method(mrb, bignum, "to_s",     bignum_to_s,   MRB_ARGS_OPT(1)); /* 15.2.8.3.25 */
   mrb_define_method(mrb, bignum, "inspect",  bignum_to_s,   MRB_ARGS_NONE());
-  mrb_define_method(mrb, bignum, "to_bn",    bignum_to_big, MRB_ARGS_NONE());
+  mrb_define_method(mrb, bignum, "to_big",   bignum_to_big, MRB_ARGS_NONE());
   mrb_define_method(mrb, bignum, "to_fix",   bignum_to_fix, MRB_ARGS_NONE());
   mrb_define_method(mrb, bignum, "divmod",   bignum_divmod, MRB_ARGS_REQ(1));
   mrb_define_method(mrb, bignum, "quo",      bignum_quo,    MRB_ARGS_REQ(1));
@@ -4929,7 +4929,7 @@ mrb_mruby_bignum_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, rfloat, "floor",    float_floor,   MRB_ARGS_NONE()); /* 15.2.9.3.10 */
   mrb_define_method(mrb, rfloat, "to_i",     float_to_i,    MRB_ARGS_NONE()); /* 15.2.9.3.15 */
   mrb_define_method(mrb, rfloat, "to_int",   float_to_i,    MRB_ARGS_NONE());
-  mrb_define_method(mrb, rfloat, "to_bn",    float_to_big,  MRB_ARGS_NONE());
+  mrb_define_method(mrb, rfloat, "to_big",   float_to_big,  MRB_ARGS_NONE());
   mrb_define_method(mrb, rfloat, "truncate", float_to_i,    MRB_ARGS_NONE()); /* 15.2.9.3.16 */
   mrb_define_method(mrb, rfloat, "divmod",   float_divmod,  MRB_ARGS_REQ(1));
   mrb_define_method(mrb, rfloat, "quo",      float_quo,     MRB_ARGS_REQ(1));
@@ -4938,7 +4938,7 @@ mrb_mruby_bignum_gem_init(mrb_state *mrb)
   /* Redefined String methods */
   mrb_define_method(mrb, string, "to_i",     string_to_i,   MRB_ARGS_OPT(1)); /* 15.2.9.3.15 */
   mrb_define_method(mrb, string, "to_int",   string_to_i,   MRB_ARGS_OPT(1));
-  mrb_define_method(mrb, string, "to_bn",    string_to_big, MRB_ARGS_OPT(1));
+  mrb_define_method(mrb, string, "to_big",   string_to_big, MRB_ARGS_OPT(1));
 
   /* ZeroDivisionError */
   mrb_define_class(mrb, "ZeroDivisionError", mrb->eStandardError_class);
