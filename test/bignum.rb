@@ -122,6 +122,7 @@
     assert_true(T_ZERO.is_a?(Bignum))
     assert_true(T_ONE.is_a?(Bignum))
     assert_true(T_MONE.is_a?(Bignum))
+    assert_equal(T_MONE, -1)
     assert_true(T31.is_a?(Bignum))
     assert_true(T31P.is_a?(Bignum))
     assert_true(T32.is_a?(Bignum))
