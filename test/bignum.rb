@@ -564,6 +564,11 @@
 
   assert('Bignum', 'test_hash') do
     assert_nothing_raised { T31P.hash }
+
+    # Bignum with Fixnum-able value should return the same hash as the Fixnum
+    [ -19723, -456, 0, 327, 23982 ].each do |num|
+      assert_equal(num.hash, num.to_big.hash)
+    end
   end
 
   assert('Bignum', 'test_coerce') do

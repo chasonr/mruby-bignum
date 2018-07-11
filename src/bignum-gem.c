@@ -4542,7 +4542,15 @@ bignum_hash(mrb_state *mrb, mrb_value self)
   struct Bignum *bigself = DATA_PTR(self);
   mrb_uint key = 0;
   size_t i, j;
+  mrb_value fix;
 
+  /* If the Bignum is within Fixnum range, return the Fixnum hash */
+  fix = bignum_to_fixnum(bigself);
+  if (mrb_fixnum_p(fix)) {
+    return mrb_funcall(mrb, fix, "hash", 0);
+  }
+
+  /* Otherwise, compute the hash based on the Bignum digits */
   for (i = 0; i < bigself->len; ++i) {
     bn_digit digit = bigself->digits[i];
     for (j = 0; j < MRB_BIGNUM_BIT; j += 8) {
