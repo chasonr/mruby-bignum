@@ -2153,7 +2153,7 @@ bn_from_str(mrb_state *mrb, char const *str, size_t str_len, unsigned base)
   }
 
   /* Interpret the prefix if present */
-  if (str_len >= 2 && str[0] == '0') {
+  if (str_len > 2 && str[0] == '0') {
     unsigned pbase = 0;
     switch (str[1]) {
     case 'x': case 'X':
