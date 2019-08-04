@@ -2169,7 +2169,7 @@ bn_from_str(mrb_state *mrb, char const *str, size_t str_len, unsigned base)
       pbase = 10;
       break;
     }
-    if (pbase != 0) {
+    if (pbase != 0 && (base == 0 || base == pbase)) {
       base = pbase;
       str += 2;
       str_len -= 2;
@@ -2179,6 +2179,9 @@ bn_from_str(mrb_state *mrb, char const *str, size_t str_len, unsigned base)
     base = 8;
     ++str;
     --str_len;
+  }
+  if (base == 0) {
+      base = 10;
   }
 
   /* Reduce the string to valid digits only */
@@ -4675,7 +4678,7 @@ float_to_i(mrb_state *mrb, mrb_value self)
 static mrb_value
 string_to_int(mrb_state *mrb, mrb_value self, mrb_bool fixnum_conv)
 {
-  mrb_int base = 10;
+  mrb_int base = 0;
   struct Bignum *bigself;
 
   mrb_get_args(mrb, "|i", &base);
