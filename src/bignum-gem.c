@@ -958,7 +958,7 @@ bn_div_basic(
   if (in1_size < in2_size) {
     /* quo is already zero */
     if (rem != NULL) {
-      memcpy(rem, in2, sizeof(rem[0])*in2_size);
+      memcpy(rem, in1, sizeof(rem[0])*in1_size);
     }
     return;
   }
