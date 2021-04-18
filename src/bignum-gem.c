@@ -7,7 +7,11 @@
 #include <mruby/numeric.h>
 #include <mruby/string.h>
 #include <ctype.h>
-#ifndef MRB_WITHOUT_FLOAT
+#if MRUBY_RELEASE_MAJOR < 3 && defined(MRB_WITHOUT_FLOAT)
+#undef MRB_NO_FLOAT
+#define MRB_NO_FLOAT 1
+#endif
+#ifndef MRB_NO_FLOAT
 #include <math.h>
 #endif
 #include <stddef.h>
@@ -34,7 +38,7 @@
 #endif
 
 /* For the math functions */
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 #ifdef MRB_USE_FLOAT
 # define F(x) x##f
 #else
@@ -53,6 +57,15 @@
 
 /* Number of bignum digits needed to represent a Fixnum */
 #define FIXNUM_DIGITS ((MRB_INT_BIT+MRB_BIGNUM_BIT-1)/MRB_BIGNUM_BIT)
+
+/* Fixnum properties in mruby 2 versus 3 */
+#if MRUBY_RELEASE_MAJOR < 3
+# undef MRB_FIXNUM_MIN
+# undef MRB_FIXNUM_MAX
+# define MRB_FIXNUM_MIN MRB_INT_MIN
+# define MRB_FIXNUM_MAX MRB_INT_MAX
+# define mrb_integer(x) mrb_fixnum(x)
+#endif
 
 /* Enable default conversion to Fixnum if this is true */
 #ifdef MRB_BIGNUM_INTEGRATION
@@ -140,10 +153,10 @@ num_identify(mrb_state *mrb, mrb_value obj)
   switch (mrb_type(obj)) {
   case MRB_TT_FIXNUM:
     return num_fixnum;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case MRB_TT_FLOAT:
     return num_float;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   case MRB_TT_DATA:
     return DATA_TYPE(obj) == &bignum_type ? num_bignum : num_none;
   default:
@@ -179,7 +192,7 @@ fixnum_to_bignum(mrb_state *mrb, mrb_int num)
 }
 
 /* Convert a floating point number to a Bignum */
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 static struct Bignum *
 float_to_bignum(mrb_state *mrb, mrb_float num)
 {
@@ -234,8 +247,8 @@ bignum_to_fixnum(struct Bignum *num)
       ufix = (ufix << MRB_BIGNUM_BIT) | num->digits[i];
     }
 #endif
-    overflow = ( num->negative && ufix > (mrb_uint)MRB_INT_MAX+1)
-            || (!num->negative && ufix > (mrb_uint)MRB_INT_MAX+0);
+    overflow = ( num->negative && ufix > (mrb_uint)MRB_FIXNUM_MAX+1)
+            || (!num->negative && ufix > (mrb_uint)MRB_FIXNUM_MAX+0);
   }
   if (!overflow) {
     return mrb_fixnum_value((mrb_int)(num->negative ? -ufix : +ufix));
@@ -296,7 +309,7 @@ new_bignum(mrb_state *mrb, struct Bignum *num, mrb_bool fixnum_conv)
 }
 
 /* Convert a Bignum to a Float */
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 static mrb_float
 bn_to_float(struct Bignum const *num)
 {
@@ -2355,7 +2368,7 @@ cmp_fix_big(mrb_state *mrb, mrb_int left, mrb_value right)
 }
 
 /* Fixnum <=> Float */
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 static int
 cmp_fix_flt(mrb_state *mrb, mrb_int left, mrb_float right)
 {
@@ -2405,7 +2418,7 @@ static mrb_value
 fixnum_cmp(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   int cmp;
 
   mrb_get_args(mrb, "o", &other);
@@ -2414,7 +2427,7 @@ fixnum_cmp(mrb_state *mrb, mrb_value self)
   case num_fixnum:
     /* Fixnum <=> Fixnum */
     {
-      mrb_int fixother = mrb_fixnum(other);
+      mrb_int fixother = mrb_integer(other);
       if (fixself < fixother) {
         cmp = -1;
       }
@@ -2441,28 +2454,28 @@ static mrb_value
 fixnum_lt(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = fixnum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) < 0);
+  return mrb_bool_value(mrb_integer(cmp) < 0);
 }
 
 static mrb_value
 fixnum_le(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = fixnum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) <= 0);
+  return mrb_bool_value(mrb_integer(cmp) <= 0);
 }
 
 static mrb_value
 fixnum_gt(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = fixnum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) > 0);
+  return mrb_bool_value(mrb_integer(cmp) > 0);
 }
 
 static mrb_value
 fixnum_ge(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = fixnum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) >= 0);
+  return mrb_bool_value(mrb_integer(cmp) >= 0);
 }
 
 /* 15.2.8.3.1  Bignum#<=> */
@@ -2477,7 +2490,7 @@ bignum_cmp(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum <=> Fixnum */
-    cmp = -cmp_fix_big(mrb, mrb_fixnum(other), self);
+    cmp = -cmp_fix_big(mrb, mrb_integer(other), self);
     break;
   case num_bignum:
     /* Bignum <=> Bignum */
@@ -2494,31 +2507,31 @@ static mrb_value
 bignum_lt(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = bignum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) < 0);
+  return mrb_bool_value(mrb_integer(cmp) < 0);
 }
 
 static mrb_value
 bignum_le(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = bignum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) <= 0);
+  return mrb_bool_value(mrb_integer(cmp) <= 0);
 }
 
 static mrb_value
 bignum_gt(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = bignum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) > 0);
+  return mrb_bool_value(mrb_integer(cmp) > 0);
 }
 
 static mrb_value
 bignum_ge(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = bignum_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) >= 0);
+  return mrb_bool_value(mrb_integer(cmp) >= 0);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.8.3.1  Float#<=> */
 static mrb_value
 float_cmp(mrb_state *mrb, mrb_value self)
@@ -2537,7 +2550,7 @@ float_cmp(mrb_state *mrb, mrb_value self)
   case num_fixnum:
     /* Float <=> Fixnum */
     {
-      mrb_float fixother = mrb_fixnum(other);
+      mrb_float fixother = mrb_integer(other);
       cmp = -cmp_fix_flt(mrb, fixother, fltself);
     }
     break;
@@ -2574,28 +2587,28 @@ static mrb_value
 float_lt(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = float_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) < 0);
+  return mrb_bool_value(mrb_integer(cmp) < 0);
 }
 
 static mrb_value
 float_le(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = float_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) <= 0);
+  return mrb_bool_value(mrb_integer(cmp) <= 0);
 }
 
 static mrb_value
 float_gt(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = float_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) > 0);
+  return mrb_bool_value(mrb_integer(cmp) > 0);
 }
 
 static mrb_value
 float_ge(mrb_state *mrb, mrb_value self)
 {
   mrb_value cmp = float_cmp(mrb, self);
-  return mrb_bool_value(mrb_fixnum(cmp) >= 0);
+  return mrb_bool_value(mrb_integer(cmp) >= 0);
 }
 
 /* ------------------------------------------------------------------------*/
@@ -2617,7 +2630,7 @@ big_flt_eq(mrb_state *mrb, mrb_value self, mrb_float other)
   bn_free(mrb, bigother);
   return eq;
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* Bignum == Fixnum */
 static mrb_bool
@@ -2635,7 +2648,7 @@ static mrb_value
 fixnum_eq(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_bool eq;
 
   mrb_get_args(mrb, "o", &other);
@@ -2643,7 +2656,7 @@ fixnum_eq(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum == Fixnum */
-    eq = fixself == mrb_fixnum(other);
+    eq = fixself == mrb_integer(other);
     break;
   case num_bignum:
     /* Fixnum == Bignum */
@@ -2668,7 +2681,7 @@ bignum_eq(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum == Fixnum */
-    eq = big_fix_eq(mrb, self, mrb_fixnum(other));
+    eq = big_fix_eq(mrb, self, mrb_integer(other));
     break;
   case num_bignum:
     /* Bignum == Bignum */
@@ -2681,7 +2694,7 @@ bignum_eq(mrb_state *mrb, mrb_value self)
   return mrb_bool_value(eq);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.9.3.2  Float#== */
 static mrb_value
 float_eq(mrb_state *mrb, mrb_value self)
@@ -2695,7 +2708,7 @@ float_eq(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float == Fixnum */
-    eq = fltself == mrb_fixnum(other);
+    eq = fltself == mrb_integer(other);
     break;
   case num_bignum:
     /* Float == Bignum */
@@ -2711,7 +2724,7 @@ float_eq(mrb_state *mrb, mrb_value self)
 
   return mrb_bool_value(eq);
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "+" */
@@ -2733,7 +2746,7 @@ fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
      of avoiding overflow altogether, except in one single corner case; and
      even that does not occur if word boxing is enabled, because that narrows
      Fixnum by one bit without changing the mrb_uint type. */
-  if (!subtract && x == MRB_INT_MIN && y == MRB_INT_MIN) {
+  if (!subtract && x == MRB_FIXNUM_MIN && y == MRB_FIXNUM_MIN) {
     struct Bignum *bsum = bn_alloc(mrb, FIXNUM_DIGITS + 1);
     bsum->digits[FIXNUM_DIGITS] = 1;
     bsum->negative = TRUE;
@@ -2762,8 +2775,8 @@ fix_fix_plus(mrb_state *mrb, mrb_int x, mrb_int y, mrb_bool subtract)
     }
   }
   /* Propagate carry */
-  if (( ssum && usum > (mrb_uint)MRB_INT_MAX+1)
-  ||  (!ssum && usum > (mrb_uint)MRB_INT_MAX+0)) {
+  if (( ssum && usum > (mrb_uint)MRB_FIXNUM_MAX+1)
+  ||  (!ssum && usum > (mrb_uint)MRB_FIXNUM_MAX+0)) {
     /* Overflow; return a Bignum */
     struct Bignum *bsum = bn_alloc(mrb, FIXNUM_DIGITS);
     bsum->negative = ssum;
@@ -2846,7 +2859,7 @@ static mrb_value
 fixnum_plus(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -2854,18 +2867,18 @@ fixnum_plus(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum + Fixnum */
-    out = fix_fix_plus(mrb, fixself, mrb_fixnum(other), FALSE);
+    out = fix_fix_plus(mrb, fixself, mrb_integer(other), FALSE);
     break;
   case num_bignum:
     /* Fixnum + Bignum */
     out = fix_big_plus(mrb, fixself, other, FALSE);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum + Float */
     out = mrb_float_value(mrb, fixself + mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "+");
     break;
@@ -2886,18 +2899,18 @@ bignum_plus(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum + Fixnum */
-    out = big_fix_plus(mrb, self, mrb_fixnum(other), FALSE);
+    out = big_fix_plus(mrb, self, mrb_integer(other), FALSE);
     break;
   case num_bignum:
     /* Bignum + Bignum */
     out = big_big_plus(mrb, self, other, FALSE);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Bignum + Float */
     out = mrb_float_value(mrb, bn_to_float(DATA_PTR(self)) + mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "+");
     break;
@@ -2906,7 +2919,7 @@ bignum_plus(mrb_state *mrb, mrb_value self)
   return out;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.9.3.3  Float#+ */
 static mrb_value
 float_plus(mrb_state *mrb, mrb_value self)
@@ -2920,7 +2933,7 @@ float_plus(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float + Fixnum */
-    out = mrb_float_value(mrb, fltself + mrb_fixnum(other));
+    out = mrb_float_value(mrb, fltself + mrb_integer(other));
     break;
   case num_bignum:
     /* Float + Bignum */
@@ -2937,7 +2950,7 @@ float_plus(mrb_state *mrb, mrb_value self)
 
   return out;
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "-" */
@@ -2948,7 +2961,7 @@ static mrb_value
 fixnum_minus(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -2956,18 +2969,18 @@ fixnum_minus(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum - Fixnum */
-    out = fix_fix_plus(mrb, fixself, mrb_fixnum(other), TRUE);
+    out = fix_fix_plus(mrb, fixself, mrb_integer(other), TRUE);
     break;
   case num_bignum:
     /* Fixnum - Bignum */
     out = fix_big_plus(mrb, fixself, other, TRUE);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum - Float */
     out = mrb_float_value(mrb, fixself - mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "-");
     break;
@@ -2988,18 +3001,18 @@ bignum_minus(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum - Fixnum */
-    out = big_fix_plus(mrb, self, mrb_fixnum(other), TRUE);
+    out = big_fix_plus(mrb, self, mrb_integer(other), TRUE);
     break;
   case num_bignum:
     /* Bignum - Bignum */
     out = big_big_plus(mrb, self, other, TRUE);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Bignum - Float */
     out = mrb_float_value(mrb, bn_to_float(DATA_PTR(self)) - mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "-");
     break;
@@ -3008,7 +3021,7 @@ bignum_minus(mrb_state *mrb, mrb_value self)
   return out;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.9.3.4  Float#- */
 static mrb_value
 float_minus(mrb_state *mrb, mrb_value self)
@@ -3022,7 +3035,7 @@ float_minus(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float - Fixnum */
-    out = mrb_float_value(mrb, fltself - mrb_fixnum(other));
+    out = mrb_float_value(mrb, fltself - mrb_integer(other));
     break;
   case num_bignum:
     /* Float - Bignum */
@@ -3039,7 +3052,7 @@ float_minus(mrb_state *mrb, mrb_value self)
 
   return out;
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "*" */
@@ -3109,7 +3122,7 @@ static mrb_value
 fixnum_mul(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -3117,18 +3130,18 @@ fixnum_mul(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum * Fixnum */
-    out = fix_fix_mul(mrb, fixself, mrb_fixnum(other));
+    out = fix_fix_mul(mrb, fixself, mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum * Bignum */
     out = fix_big_mul(mrb, fixself, other);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum * Float */
     out = mrb_float_value(mrb, fixself * mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "*");
     break;
@@ -3149,18 +3162,18 @@ bignum_mul(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum * Fixnum */
-    out = fix_big_mul(mrb, mrb_fixnum(other), self);
+    out = fix_big_mul(mrb, mrb_integer(other), self);
     break;
   case num_bignum:
     /* Bignum * Bignum */
     out = big_big_mul(mrb, self, other);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Bignum * Float */
     out = mrb_float_value(mrb, bn_to_float(DATA_PTR(self)) * mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "*");
     break;
@@ -3169,7 +3182,7 @@ bignum_mul(mrb_state *mrb, mrb_value self)
   return out;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.9.3.5  Float#* */
 static mrb_value
 float_mul(mrb_state *mrb, mrb_value self)
@@ -3183,7 +3196,7 @@ float_mul(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float * Fixnum */
-    out = mrb_float_value(mrb, fltself * mrb_fixnum(other));
+    out = mrb_float_value(mrb, fltself * mrb_integer(other));
     break;
   case num_bignum:
     /* Float * Bignum */
@@ -3200,7 +3213,7 @@ float_mul(mrb_state *mrb, mrb_value self)
 
   return out;
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "/" */
@@ -3217,7 +3230,7 @@ fix_fix_div(mrb_state *mrb, mrb_int x, mrb_int y)
   }
 
   /* This is the only way that division of Fixnums can overflow */
-  if (x == MRB_INT_MIN && y == -1) {
+  if (x == MRB_FIXNUM_MIN && y == -1) {
     struct Bignum *out = fixnum_to_bignum(mrb, x);
     out->negative = FALSE;
     return new_bignum(mrb, out, FALSE);
@@ -3288,7 +3301,7 @@ static mrb_value
 fixnum_div(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -3296,7 +3309,7 @@ fixnum_div(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum / Fixnum */
-    out = fix_fix_div(mrb, fixself, mrb_fixnum(other));
+    out = fix_fix_div(mrb, fixself, mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum / Bignum */
@@ -3322,7 +3335,7 @@ bignum_div(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum / Fixnum */
-    out = big_fix_div(mrb, self, mrb_fixnum(other));
+    out = big_fix_div(mrb, self, mrb_integer(other));
     break;
   case num_bignum:
     /* Bignum / Bignum */
@@ -3336,7 +3349,7 @@ bignum_div(mrb_state *mrb, mrb_value self)
   return out;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.8.3.6  Integer#/ */
 static mrb_value
 float_div(mrb_state *mrb, mrb_value self)
@@ -3350,7 +3363,7 @@ float_div(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float / Fixnum */
-    out = mrb_float_value(mrb, fltself / mrb_fixnum(other));
+    out = mrb_float_value(mrb, fltself / mrb_integer(other));
     break;
   case num_bignum:
     /* Float / Bignum */
@@ -3367,7 +3380,7 @@ float_div(mrb_state *mrb, mrb_value self)
 
   return out;
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "%" */
@@ -3447,7 +3460,7 @@ static mrb_value
 fixnum_mod(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -3455,7 +3468,7 @@ fixnum_mod(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum % Fixnum */
-    out = fix_fix_mod(mrb, fixself, mrb_fixnum(other));
+    out = fix_fix_mod(mrb, fixself, mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum % Bignum */
@@ -3481,7 +3494,7 @@ bignum_mod(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum % Fixnum */
-    out = big_fix_mod(mrb, self, mrb_fixnum(other));
+    out = big_fix_mod(mrb, self, mrb_integer(other));
     break;
   case num_bignum:
     /* Bignum % Bignum */
@@ -3495,7 +3508,7 @@ bignum_mod(mrb_state *mrb, mrb_value self)
   return out;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.9.3.7  Float#% */
 static mrb_value
 float_mod(mrb_state *mrb, mrb_value self)
@@ -3509,7 +3522,7 @@ float_mod(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float % Fixnum */
-    out = mrb_float_value(mrb, F(fmod)(fltself, mrb_fixnum(other)));
+    out = mrb_float_value(mrb, F(fmod)(fltself, mrb_integer(other)));
     break;
   case num_bignum:
     /* Float % Bignum */
@@ -3526,7 +3539,7 @@ float_mod(mrb_state *mrb, mrb_value self)
 
   return out;
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "divmod" */
@@ -3542,7 +3555,7 @@ fix_fix_divmod(mrb_state *mrb, mrb_int x, mrb_int y)
     mrb_raise(mrb, mrb_class_get(mrb, "ZeroDivisionError"), "divided by 0");
   }
 
-  if (x == MRB_INT_MIN && y == -1) {
+  if (x == MRB_FIXNUM_MIN && y == -1) {
     /* Fixnum division overflows */
     struct Bignum *q = fixnum_to_bignum(mrb, x);
     q->negative = FALSE;
@@ -3564,7 +3577,7 @@ fix_fix_divmod(mrb_state *mrb, mrb_int x, mrb_int y)
   return mrb_ary_new_from_values(mrb, 2, out);
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* Float.divmod(Float) */
 static mrb_value
 flt_flt_divmod(mrb_state *mrb, mrb_float x, mrb_float y)
@@ -3622,7 +3635,7 @@ static mrb_value
 fixnum_divmod(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -3630,18 +3643,18 @@ fixnum_divmod(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum.divmod(Fixnum) */
-    out = fix_fix_divmod(mrb, fixself, mrb_fixnum(other));
+    out = fix_fix_divmod(mrb, fixself, mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum.divmod(Bignum) */
     out = fix_big_divmod(mrb, fixself, DATA_PTR(other));
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum.divmod(Float) */
     out = flt_flt_divmod(mrb, fixself, mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "divmod");
     break;
@@ -3662,18 +3675,18 @@ bignum_divmod(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum.divmod(Fixnum) */
-    out = big_fix_divmod(mrb, DATA_PTR(self), mrb_fixnum(other));
+    out = big_fix_divmod(mrb, DATA_PTR(self), mrb_integer(other));
     break;
   case num_bignum:
     /* Bignum.divmod(Bignum) */
     out = big_big_divmod(mrb, DATA_PTR(self), DATA_PTR(other));
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Bignum.divmod(Float) */
     out = flt_flt_divmod(mrb, bn_to_float(DATA_PTR(self)), mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "divmod");
     break;
@@ -3682,7 +3695,7 @@ bignum_divmod(mrb_state *mrb, mrb_value self)
   return out;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* Float#divmod */
 static mrb_value
 float_divmod(mrb_state *mrb, mrb_value self)
@@ -3696,7 +3709,7 @@ float_divmod(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float.divmod(Fixnum) */
-    out = flt_flt_divmod(mrb, fltself, mrb_fixnum(other));
+    out = flt_flt_divmod(mrb, fltself, mrb_integer(other));
     break;
   case num_bignum:
     /* Float.divmod(Bignum) */
@@ -3733,18 +3746,18 @@ quo(mrb_state *mrb, mrb_value self, mrb_float fltself)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Numeric.quo(Fixnum) */
-    out = mrb_float_value(mrb, fltself / mrb_fixnum(other));
+    out = mrb_float_value(mrb, fltself / mrb_integer(other));
     break;
   case num_bignum:
     /* Numeric.quo(Bignum) */
     out = mrb_float_value(mrb, fltself / bn_to_float(DATA_PTR(other)));
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Numeric.quo(Float) */
     out = mrb_float_value(mrb, fltself / mrb_float(other));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "quo");
     break;
@@ -3757,7 +3770,7 @@ quo(mrb_state *mrb, mrb_value self, mrb_float fltself)
 static mrb_value
 fixnum_quo(mrb_state *mrb, mrb_value self)
 {
-  return quo(mrb, self, mrb_fixnum(self));
+  return quo(mrb, self, mrb_integer(self));
 }
 
 /* Bignum#quo */
@@ -3773,7 +3786,7 @@ float_quo(mrb_state *mrb, mrb_value self)
 {
   return quo(mrb, self, mrb_float(self));
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "**" */
@@ -3802,7 +3815,7 @@ big_fix_pow(mrb_state *mrb, struct Bignum const *x, int64_t y, mrb_bool fixnum_c
   }
 
   if (y < 0) {
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
     return mrb_float_value(mrb, F(pow)(bn_to_float(x), y));
 #else
     return mrb_fixnum_value(0);
@@ -3865,7 +3878,7 @@ big_big_pow(mrb_state *mrb, struct Bignum const *x, struct Bignum const *y, mrb_
   }
 
   if (y->negative) {
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
     z = mrb_float_value(mrb, F(pow)(bn_to_float(x), bn_to_float(y)));
 #else
     z = mrb_fixnum_value(0);
@@ -3914,7 +3927,7 @@ fix_big_pow(mrb_state *mrb, mrb_int x, struct Bignum const *y)
 static mrb_value
 fixnum_pow(mrb_state *mrb, mrb_value self)
 {
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value other;
   mrb_value out;
 
@@ -3923,18 +3936,18 @@ fixnum_pow(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum ** Fixnum */
-    out = fix_fix_pow(mrb, fixself, mrb_fixnum(other));
+    out = fix_fix_pow(mrb, fixself, mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum ** Bignum */
     out = fix_big_pow(mrb, fixself, DATA_PTR(other));
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum ** Float */
     out = mrb_float_value(mrb, F(pow)(fixself, mrb_float(other)));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "**");
     break;
@@ -3956,18 +3969,18 @@ bignum_pow(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum ** Fixnum */
-    out = big_fix_pow(mrb, bigself, mrb_fixnum(other), FIXNUM_CONVERT);
+    out = big_fix_pow(mrb, bigself, mrb_integer(other), FIXNUM_CONVERT);
     break;
   case num_bignum:
     /* Bignum ** Bignum */
     out = big_big_pow(mrb, bigself, DATA_PTR(other), FIXNUM_CONVERT);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Bignum ** Float */
     out = mrb_float_value(mrb, F(pow)(bn_to_float(bigself), mrb_float(other)));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     out = op_coerce(mrb, self, other, "**");
     break;
@@ -3976,7 +3989,7 @@ bignum_pow(mrb_state *mrb, mrb_value self)
   return out;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* Float#** */
 static mrb_value
 float_pow(mrb_state *mrb, mrb_value self)
@@ -3990,7 +4003,7 @@ float_pow(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Float ** Fixnum */
-    out = mrb_float_value(mrb, F(pow)(fltself, mrb_fixnum(other)));
+    out = mrb_float_value(mrb, F(pow)(fltself, mrb_integer(other)));
     break;
   case num_bignum:
     /* Float ** Bignum */
@@ -4007,7 +4020,7 @@ float_pow(mrb_state *mrb, mrb_value self)
 
   return out;
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "~" */
@@ -4083,7 +4096,7 @@ static mrb_value
 fixnum_and(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -4091,7 +4104,7 @@ fixnum_and(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum & Fixnum */
-    out = mrb_fixnum_value(fixself & mrb_fixnum(other));
+    out = mrb_fixnum_value(fixself & mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum & Bignum */
@@ -4117,7 +4130,7 @@ bignum_and(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum & Fixnum */
-    out = fix_big_and(mrb, mrb_fixnum(other), self);
+    out = fix_big_and(mrb, mrb_integer(other), self);
     break;
   case num_bignum:
     /* Bignum & Bignum */
@@ -4160,7 +4173,7 @@ static mrb_value
 fixnum_or(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -4168,7 +4181,7 @@ fixnum_or(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum | Fixnum */
-    out = mrb_fixnum_value(fixself | mrb_fixnum(other));
+    out = mrb_fixnum_value(fixself | mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum | Bignum */
@@ -4194,7 +4207,7 @@ bignum_or(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum | Fixnum */
-    out = fix_big_or(mrb, mrb_fixnum(other), self);
+    out = fix_big_or(mrb, mrb_integer(other), self);
     break;
   case num_bignum:
     /* Bignum | Bignum */
@@ -4237,7 +4250,7 @@ static mrb_value
 fixnum_xor(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -4245,7 +4258,7 @@ fixnum_xor(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum ^ Fixnum */
-    out = mrb_fixnum_value(fixself ^ mrb_fixnum(other));
+    out = mrb_fixnum_value(fixself ^ mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum ^ Bignum */
@@ -4271,7 +4284,7 @@ bignum_xor(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum ^ Fixnum */
-    out = fix_big_xor(mrb, mrb_fixnum(other), self);
+    out = fix_big_xor(mrb, mrb_integer(other), self);
     break;
   case num_bignum:
     /* Bignum ^ Bignum */
@@ -4359,7 +4372,7 @@ static mrb_value
 fixnum_lshift(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -4367,7 +4380,7 @@ fixnum_lshift(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum << Fixnum */
-    out = fix_fix_lshift(mrb, fixself, mrb_fixnum(other));
+    out = fix_fix_lshift(mrb, fixself, mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum << Bignum */
@@ -4388,7 +4401,7 @@ fixnum_lshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum << Float */
     {
@@ -4405,7 +4418,7 @@ fixnum_lshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     mrb_raise(mrb, E_TYPE_ERROR, "expected Integer");
     out = mrb_nil_value();
@@ -4427,7 +4440,7 @@ bignum_lshift(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum << Fixnum */
-    out = big_fix_lshift(mrb, self, mrb_fixnum(other));
+    out = big_fix_lshift(mrb, self, mrb_integer(other));
     break;
   case num_bignum:
     /* Bignum << Bignum */
@@ -4448,7 +4461,7 @@ bignum_lshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum << Float */
     {
@@ -4465,7 +4478,7 @@ bignum_lshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     mrb_raise(mrb, E_TYPE_ERROR, "expected Integer");
     out = mrb_nil_value();
@@ -4509,7 +4522,7 @@ static mrb_value
 fixnum_rshift(mrb_state *mrb, mrb_value self)
 {
   mrb_value other;
-  mrb_int fixself = mrb_fixnum(self);
+  mrb_int fixself = mrb_integer(self);
   mrb_value out;
 
   mrb_get_args(mrb, "o", &other);
@@ -4517,7 +4530,7 @@ fixnum_rshift(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum >> Fixnum */
-    out = fix_fix_rshift(mrb, fixself, mrb_fixnum(other));
+    out = fix_fix_rshift(mrb, fixself, mrb_integer(other));
     break;
   case num_bignum:
     /* Fixnum >> Bignum */
@@ -4539,7 +4552,7 @@ fixnum_rshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum >> Float */
     {
@@ -4556,7 +4569,7 @@ fixnum_rshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     mrb_raise(mrb, E_TYPE_ERROR, "expected Integer");
     out = mrb_nil_value();
@@ -4578,7 +4591,7 @@ bignum_rshift(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum >> Fixnum */
-    out = big_fix_rshift(mrb, self, mrb_fixnum(other));
+    out = big_fix_rshift(mrb, self, mrb_integer(other));
     break;
   case num_bignum:
     /* Bignum >> Bignum */
@@ -4600,7 +4613,7 @@ bignum_rshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum >> Float */
     {
@@ -4617,7 +4630,7 @@ bignum_rshift(mrb_state *mrb, mrb_value self)
       }
     }
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
     mrb_raise(mrb, E_TYPE_ERROR, "expected Integer");
     out = mrb_nil_value();
@@ -4643,11 +4656,11 @@ fixnum_eql(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Fixnum.eql?(Fixnum) */
-    eql = mrb_fixnum(self) == mrb_fixnum(other);
+    eql = mrb_integer(self) == mrb_integer(other);
     break;
   case num_bignum:
     /* Fixnum.eql?(Bignum) */
-    eql = big_fix_eq(mrb, other, mrb_fixnum(self));
+    eql = big_fix_eq(mrb, other, mrb_integer(self));
     break;
   default:
     eql = FALSE;
@@ -4669,7 +4682,7 @@ bignum_eql(mrb_state *mrb, mrb_value self)
   switch (num_identify(mrb, other)) {
   case num_fixnum:
     /* Bignum.eql?(Fixnum) */
-    eql = big_fix_eq(mrb, self, mrb_fixnum(other));
+    eql = big_fix_eq(mrb, self, mrb_integer(other));
     break;
   case num_bignum:
     /* Bignum.eql?(Bignum) */
@@ -4718,7 +4731,7 @@ bignum_hash(mrb_state *mrb, mrb_value self)
 /* "to_f" */
 /* ------------------------------------------------------------------------*/
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.8.3.23 Integer#to_f */
 static mrb_value
 bignum_to_f(mrb_state *mrb, mrb_value self)
@@ -4728,7 +4741,7 @@ bignum_to_f(mrb_state *mrb, mrb_value self)
 
   return mrb_float_value(mrb, fltself);
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* "to_s" */
@@ -4759,7 +4772,7 @@ bignum_to_s(mrb_state *mrb, mrb_value self)
 /* Float to Integer conversions */
 /* ------------------------------------------------------------------------*/
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 /* 15.2.9.3.8 Float#ceil */
 static mrb_value
 float_ceil(mrb_state *mrb, mrb_value self)
@@ -4822,7 +4835,7 @@ float_to_i(mrb_state *mrb, mrb_value self)
 {
   return float_to_int(mrb, self, FIXNUM_CONVERT);
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 /* ------------------------------------------------------------------------*/
 /* String to Integer conversion */
@@ -4858,7 +4871,7 @@ string_to_i(mrb_state *mrb, mrb_value self)
 static mrb_value
 fixnum_to_big(mrb_state *mrb, mrb_value self)
 {
-  struct Bignum *bigself = fixnum_to_bignum(mrb, mrb_fixnum(self));
+  struct Bignum *bigself = fixnum_to_bignum(mrb, mrb_integer(self));
   return new_bignum(mrb, bigself, FALSE);
 }
 
@@ -4868,13 +4881,13 @@ bignum_to_big(mrb_state *mrb, mrb_value self)
   return self;
 }
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
 static mrb_value
 float_to_big(mrb_state *mrb, mrb_value self)
 {
   return float_to_int(mrb, self, FALSE);
 }
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
 static mrb_value
 string_to_big(mrb_state *mrb, mrb_value self)
@@ -4922,20 +4935,20 @@ fixnum_coerce(mrb_state *mrb, mrb_value self)
   case num_bignum:
     /* Fixnum.coerce(Bignum) */
     {
-      struct Bignum *bigself = fixnum_to_bignum(mrb, mrb_fixnum(self));
+      struct Bignum *bigself = fixnum_to_bignum(mrb, mrb_integer(self));
       mrb_ary_set(mrb, pair, 0, other);
       mrb_ary_set(mrb, pair, 1, new_bignum(mrb, bigself, FALSE));
     }
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Fixnum.coerce(Float) */
     mrb_ary_set(mrb, pair, 0, other);
-    mrb_ary_set(mrb, pair, 1, mrb_float_value(mrb, mrb_fixnum(self)));
+    mrb_ary_set(mrb, pair, 1, mrb_float_value(mrb, mrb_integer(self)));
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
     {
       mrb_value fltother;
 
@@ -4947,12 +4960,12 @@ fixnum_coerce(mrb_state *mrb, mrb_value self)
         goto coerce_fail;
       }
       mrb_ary_set(mrb, pair, 0, fltother);
-      mrb_ary_set(mrb, pair, 1, mrb_float_value(mrb, mrb_fixnum(self)));
+      mrb_ary_set(mrb, pair, 1, mrb_float_value(mrb, mrb_integer(self)));
     }
     break;
 #else
     goto coerce_fail;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   }
 
   return pair;
@@ -4975,7 +4988,7 @@ bignum_coerce(mrb_state *mrb, mrb_value self)
   case num_fixnum:
     /* Bignum.coerce(Fixnum) */
     {
-      struct Bignum *bigother = fixnum_to_bignum(mrb, mrb_fixnum(other));
+      struct Bignum *bigother = fixnum_to_bignum(mrb, mrb_integer(other));
       mrb_ary_set(mrb, pair, 0, new_bignum(mrb, bigother, FALSE));
       mrb_ary_set(mrb, pair, 1, self);
     }
@@ -4985,7 +4998,7 @@ bignum_coerce(mrb_state *mrb, mrb_value self)
     mrb_ary_set(mrb, pair, 0, other);
     mrb_ary_set(mrb, pair, 1, self);
     break;
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   case num_float:
     /* Bignum.coerce(Float) */
     {
@@ -4994,9 +5007,9 @@ bignum_coerce(mrb_state *mrb, mrb_value self)
       mrb_ary_set(mrb, pair, 1, mrb_float_value(mrb, fltself));
     }
     break;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   default:
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
     {
       mrb_float fltself = bn_to_float(DATA_PTR(self));
       mrb_value fltother;
@@ -5014,7 +5027,7 @@ bignum_coerce(mrb_state *mrb, mrb_value self)
     break;
 #else
     goto coerce_fail;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   }
 
   return pair;
@@ -5028,11 +5041,16 @@ coerce_fail:
 void
 mrb_mruby_bignum_gem_init(mrb_state *mrb)
 {
+#if MRUBY_RELEASE_MAJOR >= 3
+  struct RClass *integer = mrb->integer_class;
+  struct RClass *fixnum  = integer;
+#else
   struct RClass *integer = mrb_class_get(mrb, "Integer");
   struct RClass *fixnum  = mrb->fixnum_class;
-#ifndef MRB_WITHOUT_FLOAT
+#endif
+#ifndef MRB_NO_FLOAT
   struct RClass *rfloat  = mrb->float_class;
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   struct RClass *string  = mrb->string_class;
 
   struct RClass *bignum = mrb_define_class(mrb, "Bignum", integer);
@@ -5059,7 +5077,7 @@ mrb_mruby_bignum_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, fixnum, "to_big",   fixnum_to_big, MRB_ARGS_NONE());
   mrb_define_method(mrb, fixnum, "to_fix",   fixnum_to_fix, MRB_ARGS_NONE());
   mrb_define_method(mrb, fixnum, "divmod",   fixnum_divmod, MRB_ARGS_REQ(1));
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   mrb_define_method(mrb, fixnum, "quo",      fixnum_quo,    MRB_ARGS_REQ(1));
 #endif
   mrb_define_method(mrb, fixnum, "**",       fixnum_pow,    MRB_ARGS_REQ(1));
@@ -5085,21 +5103,21 @@ mrb_mruby_bignum_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, bignum, ">>",       bignum_rshift, MRB_ARGS_REQ(1)); /* 15.2.8.3.13 */
   mrb_define_method(mrb, bignum, "eql?",     bignum_eql,    MRB_ARGS_REQ(1)); /* 15.2.8.3.16 */
   mrb_define_method(mrb, bignum, "hash",     bignum_hash,   MRB_ARGS_NONE()); /* 15.2.8.3.18 */
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   mrb_define_method(mrb, bignum, "to_f",     bignum_to_f,   MRB_ARGS_NONE()); /* 15.2.8.3.23 */
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
   mrb_define_method(mrb, bignum, "to_s",     bignum_to_s,   MRB_ARGS_OPT(1)); /* 15.2.8.3.25 */
   mrb_define_method(mrb, bignum, "inspect",  bignum_to_s,   MRB_ARGS_NONE());
   mrb_define_method(mrb, bignum, "to_big",   bignum_to_big, MRB_ARGS_NONE());
   mrb_define_method(mrb, bignum, "to_fix",   bignum_to_fix, MRB_ARGS_NONE());
   mrb_define_method(mrb, bignum, "divmod",   bignum_divmod, MRB_ARGS_REQ(1));
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   mrb_define_method(mrb, bignum, "quo",      bignum_quo,    MRB_ARGS_REQ(1));
 #endif
   mrb_define_method(mrb, bignum, "**",       bignum_pow,    MRB_ARGS_REQ(1));
   mrb_define_method(mrb, bignum, "coerce",   bignum_coerce, MRB_ARGS_REQ(1)); /* 15.2.7.4.4 */
 
-#ifndef MRB_WITHOUT_FLOAT
+#ifndef MRB_NO_FLOAT
   /* Redefined Float methods */
   mrb_define_method(mrb, rfloat, "<=>",      float_cmp,     MRB_ARGS_REQ(1)); /* 15.2.9.3.1  */
   mrb_define_method(mrb, rfloat, "<",        float_lt,      MRB_ARGS_REQ(1));
@@ -5121,7 +5139,7 @@ mrb_mruby_bignum_gem_init(mrb_state *mrb)
   mrb_define_method(mrb, rfloat, "divmod",   float_divmod,  MRB_ARGS_REQ(1));
   mrb_define_method(mrb, rfloat, "quo",      float_quo,     MRB_ARGS_REQ(1));
   mrb_define_method(mrb, rfloat, "**",       float_pow,     MRB_ARGS_REQ(1));
-#endif /* MRB_WITHOUT_FLOAT */
+#endif /* MRB_NO_FLOAT */
 
   /* Redefined String methods */
   mrb_define_method(mrb, string, "to_i",     string_to_i,   MRB_ARGS_OPT(1)); /* 15.2.9.3.15 */

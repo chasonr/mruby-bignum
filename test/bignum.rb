@@ -113,10 +113,10 @@
   T1024P = b.coerce(T1024 - 1).first
 
   f = b
-  while Bignum === f-1
+  while Bignum === (f-1).to_fix
     f = (f >> 1).to_fix
   end
-  FIXNUM_MAX = f-1
+  FIXNUM_MAX = (f-1).to_fix
 
   assert('Bignum', 'test_prepare') do
     assert_true(T_ZERO.is_a?(Bignum))
@@ -794,6 +794,6 @@
         assert_equal(3037000499 * 3037000499, 9223372030926249001)
         assert_equal(3037000500 * 3037000500, "9223372037000250000".to_big)
     else
-        skip "Unexpected FIXNUM_MAX (0x#{FIXNUM_MAX.to_i(16)})"
+        skip "Unexpected FIXNUM_MAX (0x#{FIXNUM_MAX.to_s(16)})"
     end
   end
