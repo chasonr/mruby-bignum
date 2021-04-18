@@ -4831,7 +4831,7 @@ float_to_i(mrb_state *mrb, mrb_value self)
 static mrb_value
 string_to_int(mrb_state *mrb, mrb_value self, mrb_bool fixnum_conv)
 {
-  mrb_int base = 0;
+  mrb_int base = 10;
   struct Bignum *bigself;
 
   mrb_get_args(mrb, "|i", &base);
