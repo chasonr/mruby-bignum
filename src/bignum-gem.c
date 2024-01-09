@@ -4853,6 +4853,11 @@ string_to_int(mrb_state *mrb, mrb_value self, mrb_bool fixnum_conv)
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "invalid radix %S", mrb_fixnum_value(base));
   }
 
+  if (RSTRING_PTR(self) == NULL || RSTRING_LEN(self) == 0) {
+    mrb_raisef(mrb, E_ARGUMENT_ERROR, "string null or len zero %S", mrb_fixnum_value(base));
+    return mrb_nil_value();
+  }
+
   bigself = bn_from_str(mrb, RSTRING_PTR(self), RSTRING_LEN(self), base);
   return new_bignum(mrb, bigself, fixnum_conv);
 }
